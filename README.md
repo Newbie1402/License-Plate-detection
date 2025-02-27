@@ -1,0 +1,5 @@
+pip install opencv-python
+pip install imutils
+pip install pytesseract
+
+download link: https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqa3k3ckxWYkMzcFJTcXA4LXdtMVhSTFVDdkFzd3xBQ3Jtc0trTnhtTVlPMGpDbWlzT25OV0k5cVZLYk03cmcxRGxseE5kV0xrU2xnbDhYdEtHRWdLUWd0cHU2Z1JhZkNuTmZMbVZHZGhZTWtEUUV4YThvZU1oeXlNVVBKY3dLTGo5cVVHdXBSeTFqTnpWeExuVVYzMA&q=https%3A%2F%2Fdigi.bib.uni-mannheim.de%2Ftesseract%2Ftesseract-ocr-w64-setup-5.3.0.20221222.exe&v=KH2NS3qd5Mc
