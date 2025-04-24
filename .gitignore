@@ -1,1 +1,2 @@
-detected_plates/
+detected_plates/*
+!detected_plates/.gitkeep
