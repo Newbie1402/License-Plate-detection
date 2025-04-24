@@ -9,3 +9,5 @@ pyyaml
 requests
 pandas
 seaborn
+xlsxwriter
+# tkinter (built-in with Python)
