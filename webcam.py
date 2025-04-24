@@ -5,7 +5,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 import pandas as pd
-import threading
+import time
 import function.utils_rotate as utils_rotate
 import function.helper as helper
 
@@ -21,7 +21,6 @@ except Exception as e:
 cap = None
 video_running = False
 detected_plates = {}
-frame_count = 0
 
 def update_textbox(plate, crop_img):
     if plate not in detected_plates:
@@ -34,13 +33,16 @@ def export_to_excel():
     if not detected_plates:
         print("Không có biển số nào để xuất.")
         return
+
     output_dir = "detected_plates"
     os.makedirs(output_dir, exist_ok=True)
+
     data = []
     for idx, (plate, crop_img) in enumerate(detected_plates.items()):
         image_path = os.path.join(output_dir, f"plate_{idx+1}.png")
         cv2.imwrite(image_path, crop_img)
         data.append([idx + 1, image_path, plate])
+
     df = pd.DataFrame(data, columns=["Số thứ tự", "Hình ảnh", "Dạng văn bản"])
     file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
     if file_path:
@@ -72,7 +74,7 @@ def detect_video():
         return
     cap = cv2.VideoCapture(file_path)
     video_running = True
-    threading.Thread(target=process_video, daemon=True).start()
+    display_video()
 
 def detect_webcam():
     global cap, video_running
@@ -81,42 +83,39 @@ def detect_webcam():
         print("Không mở được webcam.")
         return
     video_running = True
-    threading.Thread(target=process_video, daemon=True).start()
+    display_video()
 
-def process_video():
-    global cap, video_running, frame_count
-    while video_running and cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        frame_count += 1
-        if frame_count % 5 == 0:  # chỉ xử lý mỗi 5 frame
-            detect_and_display(frame)
-        resized_frame = cv2.resize(frame, (640, 480), interpolation=cv2.INTER_AREA)
-        rgb_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(rgb_frame)
-        imgtk = ImageTk.PhotoImage(image=img)
+def display_video():
+    global cap, video_running
+    if cap is None or not video_running:
+        return
+    ret, frame = cap.read()
+    if not ret or frame is None:
+        video_running = False
+        cap.release()
+        return
+
+    detect_and_display(frame)
+    frame = cv2.resize(frame, (640, 480))
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(frame)
+    imgtk = ImageTk.PhotoImage(image=img)
+    if imgtk:
         video_label.imgtk = imgtk
         video_label.configure(image=imgtk)
-        video_label.update_idletasks()
-        video_label.after(10)
-    video_running = False
-    cap.release()
+
+    video_label.after(30, display_video)
 
 def detect_and_display(frame):
-    small_frame = cv2.resize(frame, (640, 640))  # resize trước để YOLO xử lý nhanh
-    plates = yolo_LP_detect(small_frame, size=640)
+    plates = yolo_LP_detect(frame, size=640)
     list_plates = plates.pandas().xyxy[0].values.tolist()
     print(f"Phát hiện được {len(list_plates)} biển số.")
-    h_ratio = frame.shape[0] / 640
-    w_ratio = frame.shape[1] / 640
     for plate in list_plates:
-        x = int(plate[0] * w_ratio)
-        y = int(plate[1] * h_ratio)
-        w = int((plate[2] - plate[0]) * w_ratio)
-        h = int((plate[3] - plate[1]) * h_ratio)
-        crop_img = frame[y:y+h, x:x+w]
-        cv2.rectangle(frame, (x, y), (x+w, y+h), color=(0, 0, 225), thickness=2)
+        x, y, xmax, ymax = map(int, plate[:4])
+        crop_img = frame[y:ymax, x:xmax]
+        if crop_img.size == 0:
+            continue
+        cv2.rectangle(frame, (x, y), (xmax, ymax), (0, 0, 225), 2)
         for cc in range(2):
             for ct in range(2):
                 lp = helper.read_plate(yolo_license_plate, utils_rotate.deskew(crop_img, cc, ct))
@@ -124,9 +123,8 @@ def detect_and_display(frame):
                 if lp != "unknown":
                     cv2.putText(frame, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
                     update_textbox(lp, crop_img)
-                    return
+                    break
 
-# GUI
 root = tk.Tk()
 root.title("License Plate Detection")
 
