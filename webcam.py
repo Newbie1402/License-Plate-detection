@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import filedialog
 import pandas as pd
 import time
+import time
 import function.utils_rotate as utils_rotate
 import function.helper as helper
 
@@ -29,13 +30,41 @@ def update_textbox(plate, crop_img):
         textbox.insert(tk.END, f"{plate}\n")
         textbox.see(tk.END)
 
+# def export_to_excel():
+#     if not detected_plates:
+#         print("Không có biển số nào để xuất.")
+#         return
+#
+#     output_dir = "detected_plates"
+#     os.makedirs(output_dir, exist_ok=True)
+#
+#     data = []
+#     for idx, (plate, crop_img) in enumerate(detected_plates.items()):
+#         image_path = os.path.join(output_dir, f"plate_{idx+1}.png")
+#         cv2.imwrite(image_path, crop_img)
+#         data.append([idx + 1, image_path, plate])
+#
+#     df = pd.DataFrame(data, columns=["Số thứ tự", "Hình ảnh", "Dạng văn bản"])
+#     file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
+#     if file_path:
+#         with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
+#             df.to_excel(writer, index=False, sheet_name="Detected Plates")
+#             workbook = writer.book
+#             worksheet = writer.sheets["Detected Plates"]
+#             for idx, image_path in enumerate(df["Hình ảnh"]):
+#                 worksheet.set_row(idx + 1, 80)
+#                 worksheet.insert_image(idx + 1, 1, image_path, {"x_scale": 0.5, "y_scale": 0.5, "object_position": 1})
+#         print(f"Xuất file Excel thành công: {file_path}")
+
 def export_to_excel():
     if not detected_plates:
         print("Không có biển số nào để xuất.")
         return
 
+
     output_dir = "detected_plates"
     os.makedirs(output_dir, exist_ok=True)
+
 
     data = []
     for idx, (plate, crop_img) in enumerate(detected_plates.items()):
@@ -44,8 +73,14 @@ def export_to_excel():
         data.append([idx + 1, image_path, plate])
 
     df = pd.DataFrame(data, columns=["Số thứ tự", "Hình ảnh", "Dạng văn bản"])
+
     file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
-    if file_path:
+    if not file_path:
+        print("Không chọn file để lưu.")
+        return
+
+    try:
+        df = pd.DataFrame(data, columns=["Số thứ tự", "Hình ảnh", "Dạng văn bản"])
         with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
             df.to_excel(writer, index=False, sheet_name="Detected Plates")
             workbook = writer.book
@@ -54,6 +89,8 @@ def export_to_excel():
                 worksheet.set_row(idx + 1, 80)
                 worksheet.insert_image(idx + 1, 1, image_path, {"x_scale": 0.5, "y_scale": 0.5, "object_position": 1})
         print(f"Xuất file Excel thành công: {file_path}")
+    except Exception as e:
+        print(f"Đã xảy ra lỗi khi xuất file Excel: {e}")
 
 def detect_image():
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg")])
@@ -75,6 +112,7 @@ def detect_video():
     cap = cv2.VideoCapture(file_path)
     video_running = True
     display_video()
+    display_video()
 
 def detect_webcam():
     global cap, video_running
@@ -84,7 +122,24 @@ def detect_webcam():
         return
     video_running = True
     display_video()
+    display_video()
 
+def display_video():
+    global cap, video_running
+    if cap is None or not video_running:
+        return
+    ret, frame = cap.read()
+    if not ret or frame is None:
+        video_running = False
+        cap.release()
+        return
+
+    detect_and_display(frame)
+    frame = cv2.resize(frame, (640, 480))
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(frame)
+    imgtk = ImageTk.PhotoImage(image=img)
+    if imgtk:
 def display_video():
     global cap, video_running
     if cap is None or not video_running:
@@ -107,7 +162,10 @@ def display_video():
     video_label.after(30, display_video)
     
 
+    video_label.after(30, display_video)
+
 def detect_and_display(frame):
+    plates = yolo_LP_detect(frame, size=640)
     plates = yolo_LP_detect(frame, size=640)
     list_plates = plates.pandas().xyxy[0].values.tolist()
     print(f"Phát hiện được {len(list_plates)} biển số.")
@@ -145,6 +203,19 @@ def stop_video():
         print("Video đã dừng.")
         export_to_excel()  # Tự động xuất file Excel khi dừng video
 
+                    cv2.putText(frame, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
+                    update_textbox(lp, crop_img)
+                    break
+# Function to stop video from webcam
+def stop_video():
+    global cap, video_running
+    video_running = False
+    if cap:
+        cap.release()
+        cap = None
+    print("Đã dừng webcam.")
+    video_label.configure(image='')  # Xóa khung hình hiện tại
+
 root = tk.Tk()
 root.title("License Plate Detection")
 
@@ -156,6 +227,7 @@ tk.Button(button_frame, text="Chọn Ảnh", command=detect_image, width=20, hei
 tk.Button(button_frame, text="Chọn Video", command=detect_video, width=20, height=2).pack(pady=5)
 tk.Button(button_frame, text="Webcam", command=detect_webcam, width=20, height=2).pack(pady=5)
 tk.Button(button_frame, text="Dừng Video", command=stop_video, width=20, height=2, bg="#FF5722").pack(pady=5)
+tk.Button(button_frame, text="Thoát Webcam", command=stop_video, width=20, height=2, bg="#FF5733", fg="white").pack(pady=5)
 tk.Button(button_frame, text="Export to Excel", command=export_to_excel, width=20, height=2, bg="#FFC107").pack(pady=5)
 
 video_frame = tk.Frame(root, width=640, height=480, bg="black")
