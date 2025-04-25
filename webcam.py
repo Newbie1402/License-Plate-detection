@@ -128,6 +128,7 @@ def detect_and_display(frame):
     plates = yolo_LP_detect(frame, size=640)  # Chỉ gọi một lần
     list_plates = plates.pandas().xyxy[0].values.tolist()
     print(f"Phát hiện được {len(list_plates)} biển số.")
+    # B3 Vẽ khung bao quanh biển số
     for plate in list_plates:
         x, y, xmax, ymax = map(int, plate[:4])
         crop_img = frame[y:ymax, x:xmax]
