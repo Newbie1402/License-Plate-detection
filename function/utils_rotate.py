@@ -75,5 +75,12 @@ def is_valid_plate(plate_text):
     if not plate_text:
         return False
     plate_text = plate_text.replace("-", "").upper()
-    pattern = r'^\d{2}[A-Z]\d{3,4}\.?\d{2}$'
+    #Thành phần	Mô tả	Ví dụ
+# \d{2}	2 chữ số đầu: mã tỉnh/thành phố	30, 59
+# [A-Z]	1 chữ cái phân loại xe	A, B, C
+# -?	Gạch ngang ngăn cách (tùy chọn)	-
+# \d{3,4}	3–4 chữ số (một phần mã số)	123, 4567
+# \.?\d{2}	2 chữ số cuối, có thể có dấu chấm hoặc không	.45, 99
+    pattern = r'^[1-9]\d[A-Z]-?\d{3,4}\.?\d{2}$'
+
     return bool(re.match(pattern, plate_text))
