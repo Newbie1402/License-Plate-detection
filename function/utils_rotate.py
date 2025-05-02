@@ -29,7 +29,7 @@ def compute_skew(src_img, center_thres):
     lines = cv2.HoughLinesP(edges, 1, math.pi / 180, 30, minLineLength=w / 1.5, maxLineGap=h / 3.0)
 
     if lines is None:
-        return 0.0
+        return 0.0  # Nếu không tìm thấy đường thẳng, trả về 0
 
     min_line_y = float('inf')
     min_line_pos = 0
@@ -52,6 +52,7 @@ def compute_skew(src_img, center_thres):
             count += 1
 
     return math.degrees(angle / count) if count > 0 else 0.0
+
 
 
 # Deskew ảnh (nếu cần tăng độ tương phản)
