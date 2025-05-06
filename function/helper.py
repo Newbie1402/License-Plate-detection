@@ -30,9 +30,12 @@ def read_plate(yolo_license_plate, im):
         return "unknown"
 
     # Kiểm tra số lượng bounding boxes hợp lệ
-    if len(bb_list) < 2 or len(bb_list) > 20:
-
-        print("Không đủ số lượng bounding boxes để nhận diện biển số.")
+    # if len(bb_list) < 2 or len(bb_list) > 20:
+    #
+    #     print("Không đủ số lượng bounding boxes để nhận diện biển số.")
+    #     return "unknown"
+    if len(bb_list) < 1:
+        print("Không có ký tự nào được phát hiện.")
         return "unknown"
 
     center_list = []

@@ -10,4 +10,5 @@ requests
 pandas
 seaborn
 xlsxwriter
+ultralytics
 # tkinter (built-in with Python)

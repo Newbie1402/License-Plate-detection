@@ -1,3 +1,6 @@
+import sys
+import os
+from tkinter import *
 from PIL import Image, ImageTk
 import cv2
 import torch
@@ -8,18 +11,31 @@ import pandas as pd
 from ultralytics import YOLO
 import function.utils_rotate as utils_rotate
 import function.helper as helper
+from sys import exit
 
+
+def resource_path(relative_path):
+    """Lấy đường dẫn đúng tới file khi chạy bằng PyInstaller (.exe)"""
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS  # đường dẫn tạm khi chạy file .exe
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 # Tải mô hình YOLO
 def load_models():
     try:
-        yolo_LP_detect = YOLO('model/LicensePlate/Detect_Plate.pt')
-        yolo_license_plate = YOLO('model/OCR2/ocr2.pt')
-        yolo_license_plate.conf = 0.60  # Cài đặt ngưỡng confidence cho OCR
+        detect_model_path = resource_path('model/LicensePlate/Detect_Plate.pt')
+        ocr_model_path = resource_path('model/OCR2/ocr2.pt')
+
+        yolo_LP_detect = YOLO(detect_model_path)
+        yolo_license_plate = YOLO(ocr_model_path)
+        yolo_license_plate.conf = 0.60  # Ngưỡng confidence cho OCR
+
         print("Mô hình YOLOv8 đã được tải thành công.")
         return yolo_LP_detect, yolo_license_plate
     except Exception as e:
         print(f"Lỗi khi tải mô hình YOLOv8: {e}")
-        exit()
+        sys.exit()
 
 yolo_LP_detect, yolo_license_plate = load_models()
 
@@ -68,14 +84,23 @@ def export_to_excel():
     except Exception as e:
         print(f"Đã xảy ra lỗi khi xuất file Excel: {e}")
 
-# Phát hiện biển số từ ảnh
 def detect_image():
-    file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg")])
+    file_path = filedialog.askopenfilename(
+        title="Chọn ảnh để nhận diện biển số",
+        filetypes=[("Image files", "*.jpg *.png *.jpeg")]
+    )
     if not file_path:
+        print("Không có ảnh nào được chọn.")
         return
+
     image = cv2.imread(file_path)
+    if image is None:
+        print(f"Không thể đọc ảnh từ: {file_path}")
+        return
+
     detect_and_display(image)
     display_image(image)
+
 
 # Phát hiện biển số từ video
 def detect_video():
@@ -151,12 +176,29 @@ def detect_and_display(frame):
 
 
 # Hiển thị ảnh lên giao diện
-def display_image(image):
-    frame = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    img = Image.fromarray(frame)
-    imgtk = ImageTk.PhotoImage(image=img)
-    video_label.imgtk = imgtk
-    video_label.configure(image=imgtk)
+# def display_image(image):
+#     frame = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+#     img = Image.fromarray(frame)
+#     imgtk = ImageTk.PhotoImage(image=img)
+#     video_label.imgtk = imgtk
+#     video_label.configure(image=imgtk)
+
+def display_image(img):
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    h, w, _ = img_rgb.shape
+    max_width = 640
+
+    if w > max_width:
+        scale = max_width / w
+        img_rgb = cv2.resize(img_rgb, (int(w * scale), int(h * scale)))
+
+    img_pil = Image.fromarray(img_rgb)
+    img_tk = ImageTk.PhotoImage(img_pil)
+
+    # Sửa ở đây
+    video_label.config(image=img_tk)
+    video_label.image = img_tk
+
 
 # Dừng video
 def stop_video():
