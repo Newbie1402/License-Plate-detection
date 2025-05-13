@@ -20,7 +20,7 @@ Clone the repository and install dependencies:
 ```
 # Clone the repository
 git clone https://github.com/Newbie1402/License-Plate-detection.git
-cd vietnamese-license-plate
+cd License-Plate-detection
 code .
 # Install the ultralytics package 
 pip install ultralytics
